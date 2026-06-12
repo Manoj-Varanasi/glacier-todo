@@ -1,0 +1,163 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a1628 0%, #1a2a4a 30%, #2c4a6e 55%, #6b9ec4 75%, #a8d8ea 100%);
+  color: #e8f4f8;
+  overflow-x: hidden;
+}
+
+.app-container {
+  position: relative;
+  z-index: 2;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  min-height: 100vh;
+}
+
+/* Mountains */
+.mountains {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 45vh;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Glacier glow */
+.glacier-glow {
+  position: fixed;
+  bottom: 30vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80vw;
+  height: 20vh;
+  background: radial-gradient(ellipse at center, rgba(100, 200, 255, 0.08) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+  animation: glacierPulse 8s ease-in-out infinite;
+}
+
+@keyframes glacierPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Aurora */
+.aurora {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 40vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.aurora-band {
+  position: absolute;
+  width: 200%;
+  height: 60%;
+  filter: blur(60px);
+  opacity: 0.15;
+  animation: auroraFloat 12s ease-in-out infinite alternate;
+}
+
+.aurora-band:nth-child(1) {
+  top: 5%;
+  left: -20%;
+  background: linear-gradient(90deg, transparent, #00d4ff, #0088ff, #6600ff, transparent);
+  animation-duration: 14s;
+}
+
+.aurora-band:nth-child(2) {
+  top: 20%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, #00ff88, #00ccff, #4400cc, transparent);
+  animation-duration: 18s;
+  animation-delay: -5s;
+}
+
+.aurora-band:nth-child(3) {
+  top: 10%;
+  left: 10%;
+  background: linear-gradient(90deg, transparent, #ff44cc, #6600ff, #0088ff, transparent);
+  animation-duration: 16s;
+  animation-delay: -10s;
+}
+
+@keyframes auroraFloat {
+  0% { transform: translateX(0) translateY(0) scaleY(1); }
+  25% { transform: translateX(10%) translateY(-5%) scaleY(1.2); }
+  50% { transform: translateX(20%) translateY(3%) scaleY(0.8); }
+  75% { transform: translateX(5%) translateY(-2%) scaleY(1.1); }
+  100% { transform: translateX(15%) translateY(5%) scaleY(0.9); }
+}
+
+/* Stats */
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: rgba(168, 216, 234, 0.7);
+}
+
+.stats strong {
+  color: #a8d8ea;
+}
+
+/* Freeze flash */
+.freeze-flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, rgba(100, 200, 255, 0.15), transparent);
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.freeze-flash.active {
+  animation: freezeFade 0.8s ease-out forwards;
+}
+
+@keyframes freezeFade {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+/* Animations */
+@keyframes icePulse {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(100, 200, 255, 0.4)); }
+  50% { filter: drop-shadow(0 0 18px rgba(100, 200, 255, 0.9)) brightness(1.2); }
+}
+
+@keyframes todoSlideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.todo-item:hover .todo-delete {
+  opacity: 1 !important;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .app-container { padding: 1rem 0.8rem; }
+  .mountains { height: 30vh; }
+  .todo-date { display: none; }
+}
