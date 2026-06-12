@@ -1,19 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-
-const STORAGE_KEY = 'glacierStreak'
-
-function getToday() { return new Date().toISOString().split('T')[0] }
-
-function isYesterday(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  const y = new Date(); y.setDate(y.getDate() - 1)
-  return d.toISOString().split('T')[0] === y.toISOString().split('T')[0]
-}
-
-function loadStreak() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { count: 0, lastDate: null, dates: {} } }
-  catch { return { count: 0, lastDate: null, dates: {} } }
-}
+import { useAuth } from '../context/AuthContext'
 
 const MILESTONES = [
   { days: 3, emoji: '🥉', label: 'Bronze Climber' },
@@ -23,45 +9,56 @@ const MILESTONES = [
   { days: 100, emoji: '👑', label: 'Mountain King' },
 ]
 
+function getToday() { return new Date().toISOString().split('T')[0] }
+
+function isYesterday(d) {
+  const y = new Date(); y.setDate(y.getDate() - 1)
+  return d === y.toISOString().split('T')[0]
+}
+
 export function useStreak(todos) {
-  const [streak, setStreak] = useState(loadStreak)
+  const { token } = useAuth()
+  const [streakDates, setStreakDates] = useState([])
   const [freezeFlash, setFreezeFlash] = useState(false)
   const prevCompletedToday = useRef(false)
-  const prevStreakCount = useRef(streak.count)
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(streak)) }, [streak])
+  useEffect(() => {
+    if (!token) return
+    fetch('/api/todos', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.json())
+      .then(data => setStreakDates(data.streakDates || []))
+      .catch(() => {})
+  }, [token])
 
   useEffect(() => {
     const today = getToday()
     const completedToday = todos.some(t => t.completed && t.completedAt === today)
+    const hadDate = streakDates.includes(today)
 
-    if (completedToday && !prevCompletedToday.current) {
-      setStreak(prev => {
-        const dates = { ...prev.dates, [today]: true }
-        let count = prev.count
-        if (prev.lastDate === null || isYesterday(prev.lastDate)) {
-          count++
-          setFreezeFlash(true)
-          setTimeout(() => setFreezeFlash(false), 800)
-        } else if (prev.lastDate !== today) {
-          count = 1
-          Object.keys(dates).forEach(k => { if (k !== today) delete dates[k] })
-        }
-        return { count, lastDate: today, dates }
-      })
-    } else if (!completedToday && prevCompletedToday.current) {
-      setStreak(prev => {
-        const dates = { ...prev.dates }
-        delete dates[today]
-        const count = Math.max(0, prev.count - 1)
-        return { count, lastDate: count === 0 ? null : prev.lastDate, dates }
-      })
+    if (completedToday && !hadDate) {
+      setStreakDates(prev => [...prev, today])
+    } else if (!completedToday && hadDate) {
+      setStreakDates(prev => prev.filter(d => d !== today))
     }
-
-    prevCompletedToday.current = completedToday
   }, [todos])
 
-  const milestone = [...MILESTONES].reverse().find(m => streak.count >= m.days)
+  const sorted = [...streakDates].sort()
+  let streak = 0
+  if (sorted.length > 0) {
+    const last = sorted[sorted.length - 1]
+    if (last === getToday() || isYesterday(last)) {
+      streak = 1
+      for (let i = sorted.length - 2; i >= 0; i--) {
+        const cur = new Date(sorted[i] + 'T00:00:00')
+        const next = new Date(sorted[i + 1] + 'T00:00:00')
+        const diff = (next - cur) / (1000 * 60 * 60 * 24)
+        if (diff === 1) streak++
+        else break
+      }
+    }
+  }
+
+  const milestone = [...MILESTONES].reverse().find(m => streak >= m.days)
 
   const weekDays = [...Array(7)].map((_, i) => {
     const d = new Date()
@@ -69,9 +66,9 @@ export function useStreak(todos) {
     return {
       label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i],
       isToday: i === new Date().getDay(),
-      active: !!streak.dates[d.toISOString().split('T')[0]],
+      active: streakDates.includes(d.toISOString().split('T')[0]),
     }
   })
 
-  return { streak, freezeFlash, weekDays, milestone, MILESTONES }
+  return { streak: { count: streak }, freezeFlash, weekDays, milestone, MILESTONES }
 }

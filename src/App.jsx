@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './context/AuthContext'
 import { useTodos } from './hooks/useTodos'
 import { useStreak } from './hooks/useStreak'
 import { SnowCanvas } from './components/SnowCanvas'
@@ -6,6 +8,8 @@ import { StreakHeader } from './components/StreakHeader'
 import { TodoForm } from './components/TodoForm'
 import { Filters } from './components/Filters'
 import { TodoList } from './components/TodoList'
+import Login from './pages/Login'
+import Register from './pages/Register'
 import './App.css'
 
 function Mountains() {
@@ -36,36 +40,37 @@ function Mountains() {
   )
 }
 
-export default function App() {
+function Dashboard() {
+  const { user, logout } = useAuth()
   const { todos, addTodo, toggleTodo, editTodo, deleteTodo, clearCompleted, stats, totalCompleted } = useTodos()
   const { streak, freezeFlash, weekDays, milestone } = useStreak(todos)
   const [filter, setFilter] = useState('all')
-
   const pct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
 
   return (
     <>
       <SnowCanvas />
-
       <div className="aurora">
         <div className="aurora-band" />
         <div className="aurora-band" />
         <div className="aurora-band" />
       </div>
-
       <div className="glacier-glow" />
       <Mountains />
       <div className={`freeze-flash ${freezeFlash ? 'active' : ''}`} />
 
       <div className="app-container">
+        <div className="user-bar">
+          <span>🧗 {user?.name}</span>
+          <button onClick={logout} className="logout-btn">Sign Out</button>
+        </div>
+
         <StreakHeader streak={streak} weekDays={weekDays} milestone={milestone} />
 
-        {/* Summit counter */}
         <div className="summit-row">
           <span>🏔️ <strong>{totalCompleted}</strong> summits conquered</span>
         </div>
 
-        {/* Progress bar */}
         {stats.total > 0 && (
           <div className="progress-wrap">
             <div className="progress-track">
@@ -103,5 +108,28 @@ export default function App() {
         />
       </div>
     </>
+  )
+}
+
+export default function App() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏔️</div>
+          <p style={{ color: 'rgba(168,216,234,0.6)' }}>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <Routes>
+      <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+      <Route path="/" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+    </Routes>
   )
 }

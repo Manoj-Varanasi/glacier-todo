@@ -1,54 +1,60 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
 
-const TODOS_KEY = 'glacierTodos'
-const STATS_KEY = 'glacierLifetimeStats'
-
-function loadTodos() {
-  try { return JSON.parse(localStorage.getItem(TODOS_KEY)) || [] } catch { return [] }
-}
-
-function loadLifetime() {
-  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || 0 } catch { return 0 }
-}
+const API = '/api/todos'
 
 export function useTodos() {
-  const [todos, setTodos] = useState(loadTodos)
-  const [totalCompleted, setTotalCompleted] = useState(loadLifetime)
+  const { token } = useAuth()
+  const [todos, setTodos] = useState([])
+  const [totalCompleted, setTotalCompleted] = useState(0)
+  const [loaded, setLoaded] = useState(false)
 
-  useEffect(() => { localStorage.setItem(TODOS_KEY, JSON.stringify(todos)) }, [todos])
-  useEffect(() => { localStorage.setItem(STATS_KEY, JSON.stringify(totalCompleted)) }, [totalCompleted])
+  const headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }
 
-  const addTodo = useCallback((text) => {
-    setTodos(prev => [{
-      id: Date.now() + Math.random(),
-      text: text.trim(),
-      completed: false,
-      createdAt: new Date().toISOString(),
-      completedAt: null,
-    }, ...prev])
-  }, [])
+  useEffect(() => {
+    if (!token) return
+    fetch(API, { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.json())
+      .then(data => {
+        setTodos(data.todos)
+        setTotalCompleted(data.totalCompleted)
+        setLoaded(true)
+      })
+      .catch(() => setLoaded(true))
+  }, [token])
 
-  const toggleTodo = useCallback((id) => {
-    setTodos(prev => prev.map(t => {
-      if (t.id !== id) return t
-      const wasCompleted = t.completed
-      const now = new Date().toISOString().split('T')[0]
-      if (!wasCompleted) setTotalCompleted(p => p + 1)
-      return { ...t, completed: !wasCompleted, completedAt: wasCompleted ? null : now }
-    }))
-  }, [])
+  const addTodo = useCallback(async (text) => {
+    const r = await fetch(API, { method: 'POST', headers, body: JSON.stringify({ text: text.trim() }) })
+    if (!r.ok) return
+    const t = await r.json()
+    setTodos(prev => [{ ...t, completed: false }, ...prev])
+  }, [token])
 
-  const editTodo = useCallback((id, text) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, text: text.trim() } : t))
-  }, [])
+  const toggleTodo = useCallback(async (id) => {
+    const todo = todos.find(t => t.id === id)
+    if (!todo) return
+    const next = !todo.completed
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, completed: next, completed_at: next ? new Date().toISOString().split('T')[0] : null } : t))
+    if (next) setTotalCompleted(p => p + 1)
+    const r = await fetch(API + '/' + id, { method: 'PUT', headers, body: JSON.stringify({ completed: next }) })
+    if (!r.ok && next) setTotalCompleted(p => p - 1)
+  }, [token, todos])
 
-  const deleteTodo = useCallback((id) => {
+  const editTodo = useCallback(async (id, text) => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, text } : t))
+    await fetch(API + '/' + id, { method: 'PUT', headers, body: JSON.stringify({ text }) })
+  }, [token])
+
+  const deleteTodo = useCallback(async (id) => {
     setTodos(prev => prev.filter(t => t.id !== id))
-  }, [])
+    await fetch(API + '/' + id, { method: 'DELETE', headers })
+  }, [token])
 
-  const clearCompleted = useCallback(() => {
+  const clearCompleted = useCallback(async () => {
+    const completed = todos.filter(t => t.completed)
     setTodos(prev => prev.filter(t => !t.completed))
-  }, [])
+    await fetch(API, { method: 'DELETE', headers, body: JSON.stringify({ ids: completed.map(t => t.id) }) })
+  }, [token, todos])
 
   const stats = {
     total: todos.length,
@@ -56,5 +62,5 @@ export function useTodos() {
     pending: todos.filter(t => !t.completed).length,
   }
 
-  return { todos, addTodo, toggleTodo, editTodo, deleteTodo, clearCompleted, stats, totalCompleted }
+  return { todos, addTodo, toggleTodo, editTodo, deleteTodo, clearCompleted, stats, totalCompleted, loaded }
 }
