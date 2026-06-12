@@ -1,34 +1,35 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const STORAGE_KEY = 'glacierStreak'
 
-function getToday() {
-  return new Date().toISOString().split('T')[0]
-}
+function getToday() { return new Date().toISOString().split('T')[0] }
 
 function isYesterday(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
-  const y = new Date()
-  y.setDate(y.getDate() - 1)
+  const y = new Date(); y.setDate(y.getDate() - 1)
   return d.toISOString().split('T')[0] === y.toISOString().split('T')[0]
 }
 
 function loadStreak() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { count: 0, lastDate: null, dates: {} }
-  } catch {
-    return { count: 0, lastDate: null, dates: {} }
-  }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { count: 0, lastDate: null, dates: {} } }
+  catch { return { count: 0, lastDate: null, dates: {} } }
 }
+
+const MILESTONES = [
+  { days: 3, emoji: '🥉', label: 'Bronze Climber' },
+  { days: 7, emoji: '🥈', label: 'Silver Summit' },
+  { days: 14, emoji: '🥇', label: 'Golden Peak' },
+  { days: 30, emoji: '🏆', label: 'Glacier Legend' },
+  { days: 100, emoji: '👑', label: 'Mountain King' },
+]
 
 export function useStreak(todos) {
   const [streak, setStreak] = useState(loadStreak)
   const [freezeFlash, setFreezeFlash] = useState(false)
   const prevCompletedToday = useRef(false)
+  const prevStreakCount = useRef(streak.count)
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(streak))
-  }, [streak])
+  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(streak)) }, [streak])
 
   useEffect(() => {
     const today = getToday()
@@ -60,16 +61,17 @@ export function useStreak(todos) {
     prevCompletedToday.current = completedToday
   }, [todos])
 
+  const milestone = [...MILESTONES].reverse().find(m => streak.count >= m.days)
+
   const weekDays = [...Array(7)].map((_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (new Date().getDay() - i))
-    const key = d.toISOString().split('T')[0]
     return {
       label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i],
       isToday: i === new Date().getDay(),
-      active: !!streak.dates[key],
+      active: !!streak.dates[d.toISOString().split('T')[0]],
     }
   })
 
-  return { streak, freezeFlash, weekDays }
+  return { streak, freezeFlash, weekDays, milestone, MILESTONES }
 }

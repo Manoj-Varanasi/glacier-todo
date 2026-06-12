@@ -1,4 +1,4 @@
-export function StreakHeader({ streak, weekDays }) {
+export function StreakHeader({ streak, weekDays, milestone }) {
   return (
     <div style={{
       textAlign: 'center', marginBottom: '2.5rem', padding: '1.5rem',
@@ -6,7 +6,19 @@ export function StreakHeader({ streak, weekDays }) {
       borderRadius: 20, backdropFilter: 'blur(12px)',
       border: '1px solid rgba(168,216,234,0.15)',
       boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      position: 'relative', overflow: 'hidden',
     }}>
+      {milestone && (
+        <div style={{
+          position: 'absolute', top: 8, right: 12, display: 'flex', alignItems: 'center', gap: 4,
+          background: 'rgba(255,255,255,0.06)', padding: '2px 10px', borderRadius: 20,
+          fontSize: '0.7rem', color: 'rgba(168,216,234,0.8)', letterSpacing: 1,
+        }}>
+          <span style={{ fontSize: '0.9rem' }}>{milestone.emoji}</span>
+          {milestone.label}
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
         <span style={{
           fontSize: '2.5rem', lineHeight: 1,
